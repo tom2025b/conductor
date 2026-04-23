@@ -6,7 +6,7 @@ default-run = "conductor"
 description = "CLI orchestrator for multi-agent workflows between Claude Code and OpenAI Codex"
 license = "MIT"
 authors = ["Tom"]
-repository = "https://example.com/conductor"
+repository = "https://github.com/tom2025b/conductor"
 keywords = ["cli", "workflow", "automation", "ai", "orchestration"]
 categories = ["command-line-utilities", "config"]
 
