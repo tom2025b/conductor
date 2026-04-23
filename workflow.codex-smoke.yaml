@@ -1,0 +1,33 @@
+version: "1"
+name: "codex-smoke"
+description: "Minimal live Codex adapter smoke test for Conductor."
+
+defaults:
+  auto_handoff: true
+  review_required: false
+  working_directory: "."
+
+handoff:
+  path: "handover.codex-smoke.md"
+  mode: "replace"
+  required_sections:
+    - "Current State"
+    - "Open Questions"
+    - "Next Actions"
+
+agents:
+  codex:
+    provider: "open_ai_codex"
+    model: "gpt-5.4"
+    profile: "smoke"
+    workspace: "."
+
+steps:
+  - id: "smoke"
+    title: "Verify the Codex adapter path"
+    agent: "codex"
+    prompt: |
+      Confirm that you can read the workspace and report back through Conductor.
+      Mention whether `Cargo.toml` exists in the current workspace.
+    on_success:
+      route: "halt"

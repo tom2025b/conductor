@@ -1,0 +1,109 @@
+version: "1"
+name: "parallel-feature-delivery"
+description: "Coordinate Claude Code and OpenAI Codex through a reviewed implementation workflow."
+
+defaults:
+  auto_handoff: true
+  review_required: true
+  working_directory: "."
+
+handoff:
+  path: "handover.md"
+  mode: "append"
+  required_sections:
+    - "Current State"
+    - "Open Questions"
+    - "Next Actions"
+
+snippets:
+  architecture_brief:
+    trigger: ";;arch"
+    description: "Inject the current architectural goals and constraints."
+    content: |
+      You are working inside Conductor.
+      Preserve the CLI contract, keep orchestration logic deterministic,
+      and leave a clear handoff trail for the next agent.
+  review_prompt:
+    trigger: ";;review"
+    description: "Standard review request for the other agent."
+    content: |
+      Review this change for correctness, regression risk, and workflow integrity.
+      Focus on broken handoffs, invalid transitions, and missing validation.
+
+agents:
+  claude:
+    provider: "claude_code"
+    model: "sonnet"
+    profile: "implementer"
+    workspace: "."
+  codex:
+    provider: "open_ai_codex"
+    model: "gpt-5.4"
+    profile: "reviewer"
+    workspace: "."
+
+steps:
+  - id: "design"
+    title: "Design the workflow execution plan"
+    agent: "claude"
+    prompt: "Draft the execution approach and constraints."
+    snippets:
+      - "architecture_brief"
+    review:
+      required: false
+    on_success:
+      handoff_to: "codex"
+      next_step: "review_design"
+      route: "continue"
+
+  - id: "review_design"
+    title: "Review the plan before implementation"
+    agent: "codex"
+    prompt: "Review the proposed design and call out execution risks."
+    snippets:
+      - "review_prompt"
+    review:
+      gate: "quality_gate"
+      required: true
+    on_success:
+      handoff_to: "claude"
+      next_step: "implement"
+      route: "continue"
+    on_failure:
+      handoff_to: "claude"
+      next_step: "design"
+      route: "retry"
+
+  - id: "implement"
+    title: "Implement the approved workflow changes"
+    agent: "claude"
+    run:
+      - "cargo fmt"
+      - "cargo test"
+    review:
+      gate: "quality_gate"
+      required: true
+    on_success:
+      handoff_to: "codex"
+      next_step: "final_review"
+      route: "continue"
+
+  - id: "final_review"
+    title: "Approve the final result for release"
+    agent: "codex"
+    prompt: "Perform final review, verify tests, and approve release readiness."
+    review:
+      gate: "release_gate"
+      required: true
+    on_success:
+      route: "halt"
+
+review_gates:
+  - id: "quality_gate"
+    name: "Quality Gate"
+    required_approvers: 1
+    instructions: "Validate design coherence, code quality, and test coverage."
+  - id: "release_gate"
+    name: "Release Gate"
+    required_approvers: 1
+    instructions: "Confirm the workflow is shippable and handoff notes are complete."
